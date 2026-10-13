@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product &middot; Artisan Market</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="shop-page">
+  <header class="shop-header">
+    <a href="/shop" class="brand">Artisan Market</a>
+    <a href="/" class="seller-link">I'm a maker</a>
+  </header>
+  <div class="shop-wrap">
+    <div id="detail" class="buyer-wrap" style="padding:0"></div>
+    <div class="qa-wrap">
+      <h2>Ask the maker</h2>
+      <div id="qa"></div>
+      <div class="chat-input">
+        <input id="q" placeholder="e.g. Is it machine washable?" />
+        <button id="ask">Ask</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PID=window.location.pathname.split("/").filter(Boolean).pop();
+    const QLABELS=[["story","Story"],["materials","Materials"],["care","Care"],["production","Production time"],["variations","Natural variations"],["cultural_note","Cultural note"],["photo_note","The exact piece"],["buyer_faq","Buyer questions"]];
+    let buyerId=localStorage.getItem("buyer_id");if(!buyerId){buyerId="b"+Math.random().toString(36).slice(2,10);localStorage.setItem("buyer_id",buyerId)}
+    function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+    function renderListing(d){
+      if(d.error){document.getElementById("detail").innerHTML="<h1>Listing not ready</h1>";return}
+      const s=d.safe||{};let html="<div class='trust-banner'>Every statement below is traced to facts the maker confirmed. Nothing is invented.</div>";
+      if(d.photo_url)html+="<img src='"+d.photo_url+"' alt='' style='width:100%;border-radius:12px;margin-bottom:14px'/>";
+      html+="<h1>"+esc(s.title||"Handmade piece")+"</h1><div class='tagline'>Handmade &middot; one of a kind</div>";
+      if(d.price)html+="<div class='price' style='font-size:20px;margin:6px 0 4px'>\u20b9"+esc(d.price)+"</div>";
+      for(const f of QLABELS){if(s[f[0]])html+="<div class='buyer-section'><h2>"+f[1]+"</h2><p>"+esc(s[f[0]])+"</p></div>"}
+      html+="<div style='margin:18px 0'><button id='buybtn' class='buybtn'>Buy now</button></div>";
+      document.getElementById("detail").innerHTML=html;
+      const b=document.getElementById("buybtn");if(b)b.onclick=buyNow;
+    }
+    function buyNow(){const name=prompt("Your name?")||"A buyer";const contact=prompt("Your phone or email?")||"";const note=prompt("Any message for the maker? (optional)")||"";fetch("/api/buyer/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:PID,buyer_id:buyerId,name:name,contact:contact,note:note})}).then(r=>r.json()).then(res=>{alert("Order placed! The maker has been notified on WhatsApp. Reference: "+res.order_id)})}
+    function loadQa(){fetch("/api/buyer/thread/"+PID).then(r=>r.json()).then(d=>{
+      const box=document.getElementById("qa");
+      box.innerHTML=(d.qa||[]).map(qaHtml).join("")||"<p style='color:#667781'>No questions yet. Ask the maker anything.</p>";
+    })}
+    function qaHtml(item){return "<div class='qa-item'><div class='q'>Q: "+esc(item.question)+"</div>"+(item.answer?"<div class='a'>A: "+esc(item.answer)+"</div>":"<div class='pending'>Seller is checking &hellip; the answer will appear here.</div>")+"</div>"}
+    function ask(){const inp=document.getElementById("q");const q=inp.value.trim();if(!q)return;inp.value="";
+      fetch("/api/buyer/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:PID,buyer_id:buyerId,question:q})})
+       .then(r=>r.json()).then(res=>{loadQa();if(res.status==="pending")startPoll()})}
+    let pollTimer=null;
+    function startPoll(){if(pollTimer)return;pollTimer=setInterval(()=>{fetch("/api/buyer/thread/"+PID).then(r=>r.json()).then(d=>{loadQa();if(!(d.qa||[]).some(x=>x.status==="pending")){clearInterval(pollTimer);pollTimer=null}})},3000)}
+    window.addEventListener("DOMContentLoaded",()=>{
+      fetch("/api/listing/"+PID).then(r=>r.json()).then(renderListing).catch(()=>{});
+      loadQa();
+      document.getElementById("ask").onclick=ask;
+      document.getElementById("q").addEventListener("keydown",e=>{if(e.key==="Enter")ask()});
+    });
+  </script>
+</body>
+</html>

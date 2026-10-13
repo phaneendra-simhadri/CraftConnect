@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Artisan Market</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="shop-page">
+  <header class="shop-header">
+    <a href="/shop" class="brand">Artisan Market</a>
+    <a href="/" class="seller-link">I'm a maker</a>
+  </header>
+  <div class="shop-wrap">
+    <div id="grid" class="grid"></div>
+    <div class="cartbar" id="cartbar">
+      <span><strong id="cartcount">0</strong> item(s) in cart</span>
+      <button id="placeorder">Place order on WhatsApp</button>
+    </div>
+  </div>
+
+  <script>
+    function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+    const grid=document.getElementById("grid");
+    if(!localStorage.getItem("buyer_id"))localStorage.setItem("buyer_id","b"+Math.random().toString(36).slice(2,10));
+    function getCart(){try{return JSON.parse(localStorage.getItem("cart")||"[]")}catch(e){return[]}}
+    function setCart(c){localStorage.setItem("cart",JSON.stringify(c));renderCart()}
+    function renderCart(){const c=getCart();const bar=document.getElementById("cartbar");if(!bar)return;bar.style.display=c.length?"flex":"none";document.getElementById("cartcount").textContent=c.reduce((n,i)=>n+i.qty,0)}
+    function addToCart(ev,p){ev.preventDefault();ev.stopPropagation();const c=getCart();const ex=c.find(i=>i.id===p.id);if(ex)ex.qty++;else c.push({id:p.id,title:p.title,price:p.price,qty:1});setCart(c)}
+    fetch("/api/catalog").then(r=>r.json()).then(d=>{
+      if(!d.products.length){grid.innerHTML='<div class="empty">No products yet. Publish a listing from the maker chat, then reload.</div>';return}
+      grid.innerHTML=d.products.map(p=>'<a class="product-card" href="'+p.path+'">'+(p.photo_url?'<img src="'+p.photo_url+'" alt="">':'<span class="noimg"></span>')+'<div class="pc-body">'+(p.price?'<div class="price">₹'+esc(p.price)+'</div>':'')+(p.colour?'<div class="colour">Colour: '+esc(p.colour)+'</div>':'')+'<div class="pc-link">View &amp; ask a question &rarr;</div></div></a>').join("");
+    }).catch(()=>{grid.innerHTML='<div class="empty">Could not load products.</div>'});
+    const place=document.getElementById("placeorder");
+    if(place)place.onclick=()=>{const c=getCart();if(!c.length)return;const name=prompt("Your name?")||"A buyer";const contact=prompt("Your phone or email?")||"";let done=0;c.forEach(item=>{fetch("/api/buyer/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:item.id,buyer_id:localStorage.getItem("buyer_id"),name:name,contact:contact,quantity:item.qty})}).then(r=>r.json()).then(()=>{done++;if(done===c.length){setCart([]);alert("Order placed! The maker has been notified on WhatsApp.")}})});};
+    renderCart();
+  </script>
+</body>
+</html>

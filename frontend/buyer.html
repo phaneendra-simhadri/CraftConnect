@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Listing · Source-Truth</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="buyer-page">
+  <div class="buyer-wrap">
+    <div class="trust-banner">
+      Every statement below is traced to facts the maker confirmed. Nothing is generated or invented.
+    </div>
+    <h1 id="title">Loading...</h1>
+    <div class="tagline" id="tagline">Handmade by the maker</div>
+    <div id="sections"></div>
+    <div id="removed"></div>
+    <div class="buyer-section" style="margin-top:16px">
+      <h2>Confirmed facts used</h2>
+      <div id="facts"></div>
+    </div>
+  </div>
+
+  <script>
+    const SID = window.location.pathname.split("/").filter(Boolean).pop();
+    const LABELS = {
+      story: "Story",
+      materials: "Materials",
+      care: "Care",
+      production: "Production time",
+      variations: "Natural variations",
+      cultural_note: "Cultural note",
+      photo_note: "The exact piece",
+      buyer_faq: "Buyer questions",
+    };
+    const FACT_LABELS = {
+      identity: "Identity", material: "Material", care: "Care", process: "Process",
+      variation: "Variation", photo: "Photo", cultural: "Cultural", provenance: "Provenance",
+      making_time: "Making time", delivery: "Delivery", price: "Price", general: "General",
+    };
+
+    function esc(value) {
+      return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    fetch(`/api/listing/${SID}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          document.getElementById("title").textContent = "Listing not ready yet";
+          return;
+        }
+        const safe = data.safe || {};
+        document.getElementById("title").textContent = safe.title || "Handmade piece";
+        document.getElementById("tagline").textContent = "Handmade · one of a kind";
+
+        if (data.photo_url) {
+          const img = document.createElement("img");
+          img.src = data.photo_url;
+          img.alt = "Product photo";
+          img.style.cssText = "width:100%;border-radius:12px;margin-bottom:16px";
+          document.querySelector(".buyer-wrap").insertBefore(img, document.getElementById("title"));
+        }
+
+        const sections = document.getElementById("sections");
+        for (const field of Object.keys(LABELS)) {
+          if (!safe[field]) continue;
+          const div = document.createElement("div");
+          div.className = "buyer-section";
+          div.innerHTML = `<h2>${LABELS[field]}</h2><p>${esc(safe[field])}</p>`;
+          sections.appendChild(div);
+        }
+
+        if (data.removed && data.removed.length) {
+          const note = document.createElement("div");
+          note.className = "removed-note";
+          note.innerHTML =
+            "<strong>Guarded for your trust:</strong> " +
+            data.removed.length +
+            " claim(s) the maker did not confirm were blocked from this listing instead of being invented.";
+          document.getElementById("removed").appendChild(note);
+        }
+
+        const facts = document.getElementById("facts");
+        (data.facts || []).forEach((fact) => {
+          const div = document.createElement("div");
+          div.className = "provenance";
+          div.textContent = `${FACT_LABELS[fact.type] || fact.type}: ${fact.text}`;
+          facts.appendChild(div);
+        });
+      })
+      .catch(() => {
+        document.getElementById("title").textContent = "Could not load listing";
+      });
+  </script>
+</body>
+</html>

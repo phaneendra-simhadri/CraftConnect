@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Source-Truth Listings</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="phone">
+    <header class="wa-header">
+      <div class="avatar">ST</div>
+      <div class="header-text">
+        <div class="title">Source-Truth Listings</div>
+        <div class="subtitle" id="status">maker assistant · online</div>
+      </div>
+      <button class="ghost" id="sample" title="Load sample demo">&#9654;</button>
+      <button class="ghost" id="reset" title="New listing">&#8635;</button>
+    </header>
+
+    <main id="chat" class="chat"></main>
+
+    <div id="quick" class="quick"></div>
+
+    <footer class="composer">
+      <button class="mic" id="photoBtn" title="Send photo">&#128247;</button>
+      <button class="mic" id="mic" title="Record voice note">&#127908;</button>
+      <input id="input" type="text" placeholder="Type a message" autocomplete="off" />
+      <button class="send" id="send" title="Send">&#10148;</button>
+      <input id="photoFile" type="file" accept="image/*" hidden />
+    </footer>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <template id="msg-template">
+    <div class="msg">
+      <div class="bubble"><div class="text"></div><div class="meta"></div></div>
+    </div>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
